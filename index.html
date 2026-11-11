@@ -287,18 +287,24 @@
                     document.getElementById('last-roll-display').textContent = "없음";
                 }
 
-                // 💡 [수정] 제출했거나, 결과창을 보고 있을 때 사용자가 베팅했던 금액을 그대로 채워 넣어줌
+                // 관리자가 '다시 하기'로 게임을 초기화 했을 때 학생 화면 입력창 비우기
+                if (room.round === 0 && myData.status === 'waiting' && !room.lastRoll) {
+                    betInputs.forEach(i => i.value = '');
+                }
+
+                // 💡 [버그 수정] 사용자가 제출완료(submitted)했거나 결과확인(show_result) 상태인 경우에만 
+                // DB의 베팅 데이터를 바탕으로 칸을 채워주고, 아직 입력 중인 대기 상태(waiting)에서는
+                // 다른 사람의 통신 때문에 내 화면이 지워지거나 덮어씌워지지 않도록 보호합니다.
                 if (myData.bets) {
                     betInputs.forEach(i => {
                         const s = i.dataset.sum;
                         i.value = myData.bets[s] || '';
                     });
-                } else if (myData.status === 'waiting' || myBalance <= 0) {
-                    // 대기 상태이거나 파산했다면 입력창을 비움
+                } else if (myBalance <= 0) {
+                    // 파산 상태라면 확실히 비워줌
                     betInputs.forEach(i => i.value = '');
                 }
 
-                // 금액이 채워졌다면 총합을 다시 계산해서 화면에 반영
                 if (betInputs.length > 0) {
                     betInputs[0].dispatchEvent(new Event('input'));
                 }
@@ -329,7 +335,13 @@
         });
 
         document.getElementById('btn-confirm-result').addEventListener('click', async () => {
-            // 학생이 '확인' 버튼을 누르면 다음 라운드를 위해 베팅 정보를 비우고 대기 상태로 전환
+            // 학생이 '확인' 버튼을 누를 때 다음 라운드를 위해 내 로컬 입력창을 완벽히 비움
+            betInputs.forEach(i => i.value = '');
+            if(liveTotalBetEl) {
+                liveTotalBetEl.textContent = '0원';
+                liveTotalBetEl.classList.replace('text-red-600', 'text-blue-600');
+            }
+
             await update(ref(db, `dice_rooms/${roomPin}/players/${playerName}`), {
                 status: 'waiting',
                 bets: null
@@ -357,7 +369,6 @@
             });
         });
 
-        // 💡 [수정] 입력값을 임의로 지우지 않도록 i.value = '' 코드를 제거했습니다.
         function disableBetting() {
             betInputs.forEach(i => { i.disabled = true; });
             document.getElementById('btn-submit-bets').disabled = true;
