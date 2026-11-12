@@ -346,30 +346,31 @@
             });
         });
 
-        // 💡 0원 제출을 허용하는 로직
+        // 💡 0원(빈 칸) 제출이 막힘 없이 바로 되도록 수정한 로직
         document.getElementById('btn-submit-bets').addEventListener('click', async () => {
             let totalBet = 0;
             const bets = {};
+            let hasBet = false;
+
             betInputs.forEach(input => {
                 const val = parseInt(input.value) || 0;
                 if (val > 0) {
                     totalBet += val;
                     bets[input.dataset.sum] = val;
+                    hasBet = true;
                 }
             });
 
-            // 총 베팅 금액이 0원일 때, 실수로 누른 것이 아닌지 확인 후 진행
-            if (totalBet === 0) {
-                if (!confirm("총 베팅 금액이 0원입니다. 이대로 이번 라운드 베팅을 패스하시겠습니까?")) {
-                    return; // 취소하면 전송 안 함
-                }
-            } else if (totalBet > myBalance) {
+            if (totalBet > myBalance) {
                 return alert(`잔액이 부족합니다. (현재 잔액: ${myBalance}원)`);
             }
 
+            // Firebase는 빈 객체({})를 저장하지 않으므로, 베팅 금액이 없으면 null로 명시적 처리
+            const finalBets = hasBet ? bets : null;
+
             await update(ref(db, `dice_rooms/${roomPin}/players/${playerName}`), {
                 balance: myBalance - totalBet,
-                bets: bets,
+                bets: finalBets,
                 status: 'submitted'
             });
         });
