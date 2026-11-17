@@ -111,21 +111,7 @@
         let currentQuizSum = null;
         let lastRound = -1;
 
-        // ★ 배수 대폭 인하 반영 ★
-        const multipliers = { 
-            2: 7.2, 
-            3: 3.6, 
-            4: 2.4, 
-            5: 1.8, 
-            6: 1.44, 
-            7: 1.2, 
-            8: 1.44, 
-            9: 1.8, 
-            10: 2.4, 
-            11: 3.6, 
-            12: 7.2 
-        };
-
+        const multipliers = { 2: 7.2, 3: 3.6, 4: 2.4, 5: 1.8, 6: 1.44, 7: 1.2, 8: 1.44, 9: 1.8, 10: 2.4, 11: 3.6, 12: 7.2 };
         const quizAnswers = {
             2: ["1/36"], 3: ["2/36", "1/18"], 4: ["3/36", "1/12"],
             5: ["4/36", "1/9"], 6: ["5/36"], 7: ["6/36", "1/6"],
@@ -254,13 +240,22 @@
 
                 const roomCheck = snapshot.val();
                 
-                if (roomCheck.round > 0) {
-                    return alert("⛔ 이미 게임이 시작되어 중간에 입장하거나 새로고침하여 다시 들어올 수 없습니다.");
+                // 💡 [수정] 방에 해당 이름의 플레이어가 존재하는지 확인
+                const isExistingPlayer = roomCheck.players && roomCheck.players[playerName];
+                
+                // 게임이 진행 중인데 기존에 등록된 플레이어가 아니라면 접속 차단
+                if (roomCheck.round > 0 && !isExistingPlayer) {
+                    return alert("⛔ 이미 게임이 시작되어 새로운 참가자는 입장할 수 없습니다.\n(기존 참가자는 사용했던 이름을 똑같이 입력하면 재접속할 수 있습니다.)");
                 }
 
-                await set(ref(db, `dice_rooms/${roomPin}/players/${playerName}`), {
-                    name: playerName, balance: 1000000, status: 'waiting', lastWin: 0, quizzes: {}
-                });
+                // 💡 [수정] 기존 플레이어가 아니면 데이터를 새로 만들지만, 기존 플레이어면 덮어쓰지 않고 데이터를 보존!
+                if (!isExistingPlayer) {
+                    await set(ref(db, `dice_rooms/${roomPin}/players/${playerName}`), {
+                        name: playerName, balance: 1000000, status: 'waiting', lastWin: 0, quizzes: {}
+                    });
+                } else {
+                    alert(`환영합니다, ${playerName}님! 이전 데이터를 불러와 재접속합니다.`);
+                }
 
                 document.getElementById('display-name').textContent = playerName;
                 document.getElementById('login-section').classList.add('hidden');
