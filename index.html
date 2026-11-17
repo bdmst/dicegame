@@ -33,9 +33,8 @@
             </div>
         </div>
 
-        <!-- 베팅 영역 -->
         <div id="betting-area" class="w-full grid grid-cols-2 gap-3 mb-6">
-            <!-- 자바스크립트로 생성됨 -->
+            <!-- 동적 생성 영역 -->
         </div>
 
         <button id="btn-submit-bets" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-2xl py-4 rounded-xl font-bold shadow-lg transition-all">
@@ -43,7 +42,6 @@
         </button>
     </div>
 
-    <!-- 라운드 결과 확인 모달 -->
     <div id="result-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md hidden flex items-center justify-center z-50 p-4">
         <div class="bg-white rounded-[2rem] p-10 max-w-sm w-full shadow-2xl text-center flex flex-col items-center">
             <h2 class="text-3xl font-bold text-indigo-900 mb-6">🎲 주사위 결과</h2>
@@ -60,7 +58,6 @@
         </div>
     </div>
 
-    <!-- 확률 퀴즈 모달 -->
     <div id="quiz-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md hidden flex items-center justify-center z-50 p-4">
         <div class="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl text-center">
             <h2 id="quiz-sum-title" class="text-2xl font-bold text-indigo-900 mb-2">합 ? 확률 맞추기</h2>
@@ -75,7 +72,6 @@
         </div>
     </div>
 
-    <!-- 상금 슬롯머신(룰렛) 모달 -->
     <div id="slot-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md hidden flex items-center justify-center z-50 p-4">
         <div class="bg-white rounded-[2rem] p-10 max-w-sm w-full shadow-2xl text-center flex flex-col items-center border-4 border-yellow-400">
             <h2 class="text-3xl font-bold text-indigo-900 mb-2">🎉 정답! 상금 룰렛</h2>
@@ -236,101 +232,115 @@
             roomPin = document.getElementById('pin-input').value.trim();
             playerName = document.getElementById('name-input').value.trim();
             if (!roomPin || !playerName) return alert("PIN 번호와 이름을 입력하세요.");
+            if (playerName.match(/[.#$\[\]]/)) return alert("이름에 특수문자(. # $ [ ])는 사용할 수 없습니다.");
 
-            const snapshot = await get(ref(db, `dice_rooms/${roomPin}`));
-            if (!snapshot.exists()) return alert("방이 존재하지 않습니다.");
+            try {
+                const snapshot = await get(ref(db, `dice_rooms/${roomPin}`));
+                if (!snapshot.exists()) return alert("방이 존재하지 않습니다. 관리자가 방을 생성했는지 확인해주세요.");
 
-            await set(ref(db, `dice_rooms/${roomPin}/players/${playerName}`), {
-                name: playerName, balance: 1000000, status: 'waiting', lastWin: 0, quizzes: {}
-            });
-
-            document.getElementById('display-name').textContent = playerName;
-            document.getElementById('login-section').classList.add('hidden');
-            document.getElementById('game-section').classList.remove('hidden');
-            document.getElementById('game-section').classList.add('flex');
-
-            onValue(ref(db, `dice_rooms/${roomPin}`), (data) => {
-                const room = data.val();
+                const roomCheck = snapshot.val();
                 
-                if (!room || !room.players || !room.players[playerName]) {
-                    alert("관리자에 의해 방에서 강제 퇴장되었거나 방이 삭제되었습니다.");
-                    window.location.reload();
-                    return;
+                // 💡 [버그 수정] 게임이 1라운드 이상 진행된 상태에서는 그 어떤 이유로든 
+                // 새로고침하여 재입장하거나 신규 유저가 중간에 입장하는 것을 완전히 차단합니다.
+                if (roomCheck.round > 0) {
+                    return alert("⛔ 이미 게임이 시작되어 중간에 입장하거나 새로고침하여 다시 들어올 수 없습니다.");
                 }
-                
-                const myData = room.players[playerName];
-                myBalance = myData.balance;
-                myQuizzes = myData.quizzes || {};
-                
-                document.getElementById('current-balance').textContent = myBalance.toLocaleString();
 
-                document.querySelectorAll('.quiz-btn').forEach(btn => {
-                    const s = btn.dataset.sum;
-                    const probDisplay = document.getElementById(`prob-display-${s}`);
-                    if (myQuizzes[s]) {
-                        btn.textContent = '완료';
-                        btn.classList.replace('bg-indigo-500', 'bg-gray-400');
-                        btn.classList.replace('hover:bg-indigo-400', 'hover:bg-gray-400');
-                        btn.disabled = true;
-                        probDisplay.classList.remove('hidden'); 
+                await set(ref(db, `dice_rooms/${roomPin}/players/${playerName}`), {
+                    name: playerName, balance: 1000000, status: 'waiting', lastWin: 0, quizzes: {}
+                });
+
+                document.getElementById('display-name').textContent = playerName;
+                document.getElementById('login-section').classList.add('hidden');
+                document.getElementById('game-section').classList.remove('hidden');
+                document.getElementById('game-section').classList.add('flex');
+
+                onValue(ref(db, `dice_rooms/${roomPin}`), (data) => {
+                    const room = data.val();
+                    
+                    if (!room || !room.players || !room.players[playerName]) {
+                        alert("관리자에 의해 방에서 강제 퇴장되었거나 방이 삭제되었습니다.");
+                        window.location.reload();
+                        return;
+                    }
+                    
+                    const myData = room.players[playerName];
+                    myBalance = myData.balance;
+                    myQuizzes = myData.quizzes || {};
+                    
+                    document.getElementById('current-balance').textContent = myBalance.toLocaleString();
+
+                    document.querySelectorAll('.quiz-btn').forEach(btn => {
+                        const s = btn.dataset.sum;
+                        const probDisplay = document.getElementById(`prob-display-${s}`);
+                        if (myQuizzes[s]) {
+                            btn.textContent = '완료';
+                            btn.classList.replace('bg-indigo-500', 'bg-gray-400');
+                            btn.classList.replace('hover:bg-indigo-400', 'hover:bg-gray-400');
+                            btn.disabled = true;
+                            probDisplay.classList.remove('hidden'); 
+                        } else {
+                            btn.textContent = '❓ 퀴즈';
+                            btn.classList.replace('bg-gray-400', 'bg-indigo-500');
+                            btn.classList.replace('hover:bg-gray-400', 'hover:bg-indigo-400');
+                            btn.disabled = false;
+                            probDisplay.classList.add('hidden');
+                        }
+                    });
+
+                    if (room.lastRoll) {
+                        document.getElementById('last-roll-display').textContent = `${room.lastRoll.d1} + ${room.lastRoll.d2} = ${room.lastRoll.sum}`;
                     } else {
-                        btn.textContent = '❓ 퀴즈';
-                        btn.classList.replace('bg-gray-400', 'bg-indigo-500');
-                        btn.classList.replace('hover:bg-gray-400', 'hover:bg-indigo-400');
-                        btn.disabled = false;
-                        probDisplay.classList.add('hidden');
+                        document.getElementById('last-roll-display').textContent = "없음";
+                    }
+
+                    if (room.round === 0 && lastRound > 0) {
+                        betInputs.forEach(i => i.value = '');
+                    }
+                    if (room.round !== undefined) lastRound = room.round; 
+
+                    if (myData.status === 'submitted' || myData.status === 'show_result') {
+                        if (myData.bets) {
+                            betInputs.forEach(i => {
+                                const s = i.dataset.sum;
+                                i.value = myData.bets[s] || '';
+                            });
+                        }
+                    } else if (myBalance <= 0) {
+                        betInputs.forEach(i => i.value = '');
+                    }
+
+                    if (betInputs.length > 0) {
+                        betInputs[0].dispatchEvent(new Event('input'));
+                    }
+
+                    if (myData.status === 'show_result') {
+                        document.getElementById('modal-dice-result').textContent = `${room.lastRoll.d1} + ${room.lastRoll.d2} = ${room.lastRoll.sum}`;
+                        document.getElementById('modal-win-amount').textContent = `${(myData.lastWin || 0).toLocaleString()}원`;
+                        resultModal.classList.remove('hidden');
+                        disableBetting();
+                    } else {
+                        resultModal.classList.add('hidden'); 
+                        
+                        if (myBalance <= 0) {
+                            document.getElementById('status-message').textContent = "💥 파산했습니다.";
+                            document.getElementById('status-message').className = "text-xl font-bold text-red-600 mb-2";
+                            disableBetting();
+                        } else if (myData.status === 'submitted') {
+                            document.getElementById('status-message').textContent = "⏳ 관리자가 주사위를 굴릴 때까지 대기하세요.";
+                            document.getElementById('status-message').className = "text-xl font-bold text-orange-500 mb-2";
+                            disableBetting();
+                        } else {
+                            document.getElementById('status-message').textContent = "🎲 베팅을 진행해주세요!";
+                            document.getElementById('status-message').className = "text-xl font-bold text-blue-600 mb-2";
+                            enableBetting();
+                        }
                     }
                 });
 
-                if (room.lastRoll) {
-                    document.getElementById('last-roll-display').textContent = `${room.lastRoll.d1} + ${room.lastRoll.d2} = ${room.lastRoll.sum}`;
-                } else {
-                    document.getElementById('last-roll-display').textContent = "없음";
-                }
-
-                if (room.round === 0 && lastRound > 0) {
-                    betInputs.forEach(i => i.value = '');
-                }
-                if (room.round !== undefined) lastRound = room.round; 
-
-                if (myData.status === 'submitted' || myData.status === 'show_result') {
-                    if (myData.bets) {
-                        betInputs.forEach(i => {
-                            const s = i.dataset.sum;
-                            i.value = myData.bets[s] || '';
-                        });
-                    }
-                } else if (myBalance <= 0) {
-                    betInputs.forEach(i => i.value = '');
-                }
-
-                if (betInputs.length > 0) {
-                    betInputs[0].dispatchEvent(new Event('input'));
-                }
-
-                if (myData.status === 'show_result') {
-                    document.getElementById('modal-dice-result').textContent = `${room.lastRoll.d1} + ${room.lastRoll.d2} = ${room.lastRoll.sum}`;
-                    document.getElementById('modal-win-amount').textContent = `${(myData.lastWin || 0).toLocaleString()}원`;
-                    resultModal.classList.remove('hidden');
-                    disableBetting();
-                } else {
-                    resultModal.classList.add('hidden'); 
-                    
-                    if (myBalance <= 0) {
-                        document.getElementById('status-message').textContent = "💥 파산했습니다.";
-                        document.getElementById('status-message').className = "text-xl font-bold text-red-600 mb-2";
-                        disableBetting();
-                    } else if (myData.status === 'submitted') {
-                        document.getElementById('status-message').textContent = "⏳ 관리자가 주사위를 굴릴 때까지 대기하세요.";
-                        document.getElementById('status-message').className = "text-xl font-bold text-orange-500 mb-2";
-                        disableBetting();
-                    } else {
-                        document.getElementById('status-message').textContent = "🎲 베팅을 진행해주세요!";
-                        document.getElementById('status-message').className = "text-xl font-bold text-blue-600 mb-2";
-                        enableBetting();
-                    }
-                }
-            });
+            } catch (error) {
+                alert("🚨 접속 실패!\n에러 내용: " + error.message);
+            }
         });
 
         document.getElementById('btn-confirm-result').addEventListener('click', async () => {
@@ -346,33 +356,34 @@
             });
         });
 
-        // 💡 0원(빈 칸) 제출이 막힘 없이 바로 되도록 수정한 로직
         document.getElementById('btn-submit-bets').addEventListener('click', async () => {
-            let totalBet = 0;
-            const bets = {};
-            let hasBet = false;
+            try {
+                let totalBet = 0;
+                const bets = {};
+                betInputs.forEach(input => {
+                    const val = parseInt(input.value) || 0;
+                    if (val > 0) {
+                        totalBet += val;
+                        bets[input.dataset.sum] = val;
+                    }
+                });
 
-            betInputs.forEach(input => {
-                const val = parseInt(input.value) || 0;
-                if (val > 0) {
-                    totalBet += val;
-                    bets[input.dataset.sum] = val;
-                    hasBet = true;
+                if (totalBet === 0) {
+                    if (!confirm("총 베팅 금액이 0원입니다. 이대로 이번 라운드 베팅을 패스하시겠습니까?")) {
+                        return; 
+                    }
+                } else if (totalBet > myBalance) {
+                    return alert(`잔액이 부족합니다. (현재 잔액: ${myBalance}원)`);
                 }
-            });
 
-            if (totalBet > myBalance) {
-                return alert(`잔액이 부족합니다. (현재 잔액: ${myBalance}원)`);
+                await update(ref(db, `dice_rooms/${roomPin}/players/${playerName}`), {
+                    balance: myBalance - totalBet,
+                    bets: bets,
+                    status: 'submitted'
+                });
+            } catch (error) {
+                alert("베팅 제출 실패: " + error.message);
             }
-
-            // Firebase는 빈 객체({})를 저장하지 않으므로, 베팅 금액이 없으면 null로 명시적 처리
-            const finalBets = hasBet ? bets : null;
-
-            await update(ref(db, `dice_rooms/${roomPin}/players/${playerName}`), {
-                balance: myBalance - totalBet,
-                bets: finalBets,
-                status: 'submitted'
-            });
         });
 
         function disableBetting() {
