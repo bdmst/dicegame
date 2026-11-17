@@ -152,7 +152,21 @@
         let currentPin = "";
         let roundCount = 0;
         let latestPlayersData = {}; 
-        const multipliers = { 2:18, 3:9, 4:6, 5:4.5, 6:3.6, 7:3, 8:3.6, 9:4.5, 10:6, 11:9, 12:18 };
+        
+        // ★ 배수를 확률의 역수 / 5 로 대폭 낮춤 ★
+        const multipliers = { 
+            2: 7.2, 
+            3: 3.6, 
+            4: 2.4, 
+            5: 1.8, 
+            6: 1.44, 
+            7: 1.2, 
+            8: 1.44, 
+            9: 1.8, 
+            10: 2.4, 
+            11: 3.6, 
+            12: 7.2 
+        };
 
         function createCubeHTML(id) {
             const dots = {
@@ -324,9 +338,6 @@
                 for (const key in latestPlayersData) {
                     const p = latestPlayersData[key];
                     
-                    // 💡 [버그 수정] 전재산을 베팅해서 잔액이 0원인 상태라도 
-                    // 이번 라운드에 베팅을 냈다면 무조건 결과를 보여주도록 수정!
-                    // 완전히 파산해서 이번 라운드에 베팅조차 안 낸 학생만 패스합니다.
                     if (p.balance <= 0 && p.status !== 'submitted') continue;
                     
                     let winnings = 0;
