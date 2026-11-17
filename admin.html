@@ -153,20 +153,8 @@
         let roundCount = 0;
         let latestPlayersData = {}; 
         
-        // ★ 배수를 확률의 역수 / 5 로 대폭 낮춤 ★
-        const multipliers = { 
-            2: 7.2, 
-            3: 3.6, 
-            4: 2.4, 
-            5: 1.8, 
-            6: 1.44, 
-            7: 1.2, 
-            8: 1.44, 
-            9: 1.8, 
-            10: 2.4, 
-            11: 3.6, 
-            12: 7.2 
-        };
+        // (확률의 역수) ÷ 4 를 적용한 배수
+const multipliers = { 2: 9, 3: 4.5, 4: 3, 5: 2.25, 6: 1.8, 7: 1.5, 8: 1.8, 9: 2.25, 10: 3, 11: 4.5, 12: 9 };
 
         function createCubeHTML(id) {
             const dots = {
