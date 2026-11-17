@@ -11,12 +11,10 @@
         body { font-family: 'Jua', sans-serif; background: linear-gradient(135deg, #1e3a8a, #1e1b4b); color: white; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         
-        /* 🎲 3D 주사위 CSS 설정 */
         .scene { width: 80px; height: 80px; perspective: 600px; }
         .cube { 
             width: 100%; height: 100%; position: relative; 
             transform-style: preserve-3d; 
-            /* 굴러가는 애니메이션 시간과 텐션 조절 */
             transition: transform 1.5s cubic-bezier(0.25, 1, 0.5, 1); 
         }
         .cube-face { 
@@ -29,7 +27,6 @@
         .dot { background: #4338ca; border-radius: 50%; box-shadow: inset 0 2px 4px rgba(0,0,0,0.4); }
         .empty-dot { background: transparent; }
 
-        /* 주사위 6개 면의 3D 배치 */
         .face-1 { transform: rotateY(0deg) translateZ(40px); }
         .face-6 { transform: rotateY(180deg) translateZ(40px); }
         .face-3 { transform: rotateY(90deg) translateZ(40px); }
@@ -42,7 +39,6 @@
 
     <h1 class="text-4xl font-bold mb-4 drop-shadow-md">🎲 주사위 확률 게임 관리자</h1>
     
-    <!-- 1. 방 생성 영역 -->
     <div id="setup-section" class="bg-white/10 p-10 rounded-3xl backdrop-blur-md text-center max-w-lg w-full mt-10">
         <p class="mb-8 text-xl text-indigo-100">새로운 게임 방을 만들어 학생들을 초대하세요.</p>
         <button id="btn-create-room" class="bg-blue-500 hover:bg-blue-400 text-white text-3xl px-10 py-5 rounded-2xl font-bold shadow-[0_8px_0_rgb(29,78,216)] hover:translate-y-1 hover:shadow-[0_4px_0_rgb(29,78,216)] transition-all">
@@ -50,11 +46,9 @@
         </button>
     </div>
 
-    <!-- 2. 게임 진행 영역 -->
     <div id="game-section" class="hidden flex-col items-center w-full max-w-7xl mt-2">
         <div class="flex flex-col lg:flex-row items-center lg:items-start gap-6 w-full justify-start mb-6">
             
-            <!-- [좌측 영역]: 주사위 굴리기 컨트롤 -->
             <div class="flex flex-col items-center lg:w-4/12 shrink-0">
                 <div class="flex items-center gap-3 mb-4 text-xl bg-white/20 px-6 py-2.5 rounded-full backdrop-blur-sm">
                     접속 PIN: <span id="room-pin" class="font-bold text-yellow-300 text-4xl tracking-wider"></span>
@@ -64,13 +58,9 @@
                     📱 학생 접속용 QR코드 보기
                 </button>
 
-                <!-- 3D 주사위 결과창 -->
                 <div class="h-64 w-full bg-white rounded-3xl shadow-2xl flex flex-col items-center justify-center border-8 border-indigo-300 mb-4 overflow-hidden relative">
                     <div class="text-gray-500 mb-6 font-bold text-xl">주사위 결과</div>
-                    
-                    <!-- 3D 큐브 주사위가 들어갈 공간 -->
                     <div id="dice-container" class="flex gap-12 mb-6"></div>
-                    
                     <div id="dice-sum-text" class="text-3xl font-bold text-indigo-900 bg-indigo-50 px-6 py-2 rounded-xl border border-indigo-100 transition-all">
                         대기중
                     </div>
@@ -85,7 +75,6 @@
                 </button>
             </div>
 
-            <!-- [우측 영역]: 학생 대시보드 (순위표) -->
             <div class="lg:w-8/12 w-full bg-white/10 p-6 rounded-3xl backdrop-blur-md h-[580px] overflow-hidden flex flex-col">
                 <div class="flex justify-between items-center mb-3">
                     <h2 class="text-2xl font-bold text-indigo-100">🏆 실시간 학생 자산 순위표</h2>
@@ -122,7 +111,6 @@
         </div>
     </div>
 
-    <!-- 미배팅 학생 알림 모달 -->
     <div id="unplaced-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
         <div class="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl text-slate-800 text-center">
             <h3 class="text-2xl font-bold text-red-600 mb-2">아직 베팅하지 않은 학생이 있어요!</h3>
@@ -135,7 +123,6 @@
         </div>
     </div>
 
-    <!-- QR 코드 모달 -->
     <div id="qr-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md hidden flex items-center justify-center z-50 p-4" onclick="closeQrModal(event)">
         <div class="bg-white rounded-[2rem] p-10 max-w-lg w-full shadow-2xl text-center flex flex-col items-center" onclick="event.stopPropagation()">
             <h2 class="text-3xl font-bold text-indigo-900 mb-2">학생 접속용 QR코드</h2>
@@ -167,15 +154,10 @@
         let latestPlayersData = {}; 
         const multipliers = { 2:18, 3:9, 4:6, 5:4.5, 6:3.6, 7:3, 8:3.6, 9:4.5, 10:6, 11:9, 12:18 };
 
-        // 💡 3D 주사위 면 생성 로직
         function createCubeHTML(id) {
             const dots = {
-                1: [0,0,0, 0,1,0, 0,0,0],
-                2: [1,0,0, 0,0,0, 0,0,1],
-                3: [1,0,0, 0,1,0, 0,0,1],
-                4: [1,0,1, 0,0,0, 1,0,1],
-                5: [1,0,1, 0,1,0, 1,0,1],
-                6: [1,0,1, 1,0,1, 1,0,1]
+                1: [0,0,0, 0,1,0, 0,0,0], 2: [1,0,0, 0,0,0, 0,0,1], 3: [1,0,0, 0,1,0, 0,0,1],
+                4: [1,0,1, 0,0,0, 1,0,1], 5: [1,0,1, 0,1,0, 1,0,1], 6: [1,0,1, 1,0,1, 1,0,1]
             };
             let facesHTML = '';
             for(let i=1; i<=6; i++) {
@@ -186,29 +168,32 @@
         }
         document.getElementById('dice-container').innerHTML = createCubeHTML('cube1') + createCubeHTML('cube2');
 
-        // 주사위의 현재 각도 저장
         let currentRotX1 = 0, currentRotY1 = 0;
         let currentRotX2 = 0, currentRotY2 = 0;
 
         document.getElementById('btn-create-room').addEventListener('click', async () => {
-            currentPin = Math.floor(1000 + Math.random() * 9000).toString();
-            roundCount = 0;
-            
-            await set(ref(db, 'dice_rooms/' + currentPin), {
-                status: 'betting', round: 0, players: {} 
-            });
+            try {
+                currentPin = Math.floor(1000 + Math.random() * 9000).toString();
+                roundCount = 0;
+                
+                await set(ref(db, 'dice_rooms/' + currentPin), {
+                    status: 'betting', round: 0, players: {} 
+                });
 
-            document.getElementById('setup-section').classList.add('hidden');
-            document.getElementById('game-section').classList.remove('hidden');
-            document.getElementById('game-section').classList.add('flex');
-            document.getElementById('room-pin').textContent = currentPin;
-            document.getElementById('modal-pin-display').textContent = currentPin;
-            generateQRCode();
+                document.getElementById('setup-section').classList.add('hidden');
+                document.getElementById('game-section').classList.remove('hidden');
+                document.getElementById('game-section').classList.add('flex');
+                document.getElementById('room-pin').textContent = currentPin;
+                document.getElementById('modal-pin-display').textContent = currentPin;
+                generateQRCode();
 
-            onValue(ref(db, `dice_rooms/${currentPin}/players`), (snapshot) => {
-                latestPlayersData = snapshot.exists() ? snapshot.val() : {};
-                renderPlayers();
-            });
+                onValue(ref(db, `dice_rooms/${currentPin}/players`), (snapshot) => {
+                    latestPlayersData = snapshot.exists() ? snapshot.val() : {};
+                    renderPlayers();
+                });
+            } catch (error) {
+                alert("🚨 방 생성 실패!\n에러 내용: " + error.message);
+            }
         });
 
         window.kickPlayer = async function(playerName) {
@@ -269,9 +254,7 @@
             const unplaced = [];
             for (const key in latestPlayersData) {
                 const p = latestPlayersData[key];
-                if (p.balance > 0 && p.status !== 'submitted') {
-                    unplaced.push(p.name);
-                }
+                if (p.balance > 0 && p.status !== 'submitted') unplaced.push(p.name);
             }
 
             if (unplaced.length > 0) {
@@ -290,31 +273,22 @@
         };
         window.closeUnplacedModal = () => document.getElementById('unplaced-modal').classList.add('hidden');
 
-        // 🎲 3D 큐브 회전 계산 및 애니메이션 함수
         function rollDice3D(d1, d2) {
-            // 각 주사위 결과에 맞는 목표 각도 (앞면으로 보여지게 하는 회전값)
             const target = {
-                1: { x: 0, y: 0 },
-                6: { x: 0, y: 180 },
-                3: { x: 0, y: -90 },
-                4: { x: 0, y: 90 },
-                2: { x: -90, y: 0 },
-                5: { x: 90, y: 0 }
+                1: { x: 0, y: 0 }, 6: { x: 0, y: 180 },
+                3: { x: 0, y: -90 }, 4: { x: 0, y: 90 },
+                2: { x: -90, y: 0 }, 5: { x: 90, y: 0 }
             };
 
-            const t1 = target[d1], t2 = target[d2];
-
-            // 3바퀴(1080도) ~ 6바퀴(2160도) 랜덤 회전 추가
             currentRotX1 += Math.floor(Math.random() * 4 + 3) * 360;
             currentRotY1 += Math.floor(Math.random() * 4 + 3) * 360;
             currentRotX2 += Math.floor(Math.random() * 4 + 3) * 360;
             currentRotY2 += Math.floor(Math.random() * 4 + 3) * 360;
 
-            // 최종적으로 타겟 면이 정면을 보도록 조정
-            currentRotX1 = currentRotX1 - (currentRotX1 % 360) + t1.x;
-            currentRotY1 = currentRotY1 - (currentRotY1 % 360) + t1.y;
-            currentRotX2 = currentRotX2 - (currentRotX2 % 360) + t2.x;
-            currentRotY2 = currentRotY2 - (currentRotY2 % 360) + t2.y;
+            currentRotX1 = currentRotX1 - (currentRotX1 % 360) + target[d1].x;
+            currentRotY1 = currentRotY1 - (currentRotY1 % 360) + target[d1].y;
+            currentRotX2 = currentRotX2 - (currentRotX2 % 360) + target[d2].x;
+            currentRotY2 = currentRotY2 - (currentRotY2 % 360) + target[d2].y;
 
             document.getElementById('cube1').style.transform = `rotateX(${currentRotX1}deg) rotateY(${currentRotY1}deg)`;
             document.getElementById('cube2').style.transform = `rotateX(${currentRotX2}deg) rotateY(${currentRotY2}deg)`;
@@ -334,10 +308,8 @@
             sumTextEl.textContent = '굴리는 중...';
             sumTextEl.classList.add('animate-pulse', 'text-pink-500');
 
-            // 3D 애니메이션 실행 (CSS transition 1.5초 적용)
             rollDice3D(d1, d2);
 
-            // 주사위가 완전히 멈춘 후 로직 실행
             setTimeout(async () => {
                 roundCount++;
                 document.getElementById('round-count').textContent = roundCount;
@@ -351,7 +323,11 @@
 
                 for (const key in latestPlayersData) {
                     const p = latestPlayersData[key];
-                    if (p.balance <= 0) continue;
+                    
+                    // 💡 [버그 수정] 전재산을 베팅해서 잔액이 0원인 상태라도 
+                    // 이번 라운드에 베팅을 냈다면 무조건 결과를 보여주도록 수정!
+                    // 완전히 파산해서 이번 라운드에 베팅조차 안 낸 학생만 패스합니다.
+                    if (p.balance <= 0 && p.status !== 'submitted') continue;
                     
                     let winnings = 0;
                     if (p.bets && p.bets[sum]) winnings = p.bets[sum] * multipliers[sum];
@@ -359,7 +335,6 @@
                     updates[`dice_rooms/${currentPin}/players/${key}/balance`] = p.balance + winnings;
                     updates[`dice_rooms/${currentPin}/players/${key}/lastWin`] = winnings;
                     updates[`dice_rooms/${currentPin}/players/${key}/status`] = 'show_result'; 
-                    // 학생 화면에 베팅 금액이 남아있도록 이곳에서 bets를 null로 비우지 않습니다.
                 }
 
                 await update(ref(db), updates);
