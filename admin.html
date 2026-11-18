@@ -66,11 +66,16 @@
                     </div>
                 </div>
                 
-                <button id="btn-draw" class="bg-yellow-400 hover:bg-yellow-300 text-yellow-900 text-3xl px-8 py-4 rounded-3xl font-bold shadow-[0_8px_0_rgb(161,98,7)] hover:translate-y-1 hover:shadow-[0_4px_0_rgb(161,98,7)] transition-all w-full">
+                <button id="btn-draw" class="mb-4 bg-yellow-400 hover:bg-yellow-300 text-yellow-900 text-3xl px-8 py-4 rounded-3xl font-bold shadow-[0_8px_0_rgb(161,98,7)] hover:translate-y-1 hover:shadow-[0_4px_0_rgb(161,98,7)] transition-all w-full">
                     주사위 굴리기 (<span id="round-count">0</span>/10)
                 </button>
 
-                <button id="btn-reset-game" class="hidden mt-4 bg-green-500 hover:bg-green-400 text-white text-2xl px-8 py-4 rounded-2xl font-bold shadow-[0_6px_0_rgb(21,128,61)] hover:translate-y-1 hover:shadow-[0_3px_0_rgb(21,128,61)] transition-all w-full">
+                <!-- 💡 일괄 10만 원 지급 버튼 추가 -->
+                <button id="btn-give-all" class="bg-emerald-500 hover:bg-emerald-400 text-white text-xl px-8 py-4 rounded-2xl font-bold shadow-[0_6px_0_rgb(4,120,87)] hover:translate-y-1 hover:shadow-[0_3px_0_rgb(4,120,87)] transition-all w-full">
+                    💸 전체 학생 10만원 지급
+                </button>
+
+                <button id="btn-reset-game" class="hidden mt-4 bg-gray-500 hover:bg-gray-400 text-white text-2xl px-8 py-4 rounded-2xl font-bold shadow-[0_6px_0_rgb(75,85,99)] hover:translate-y-1 hover:shadow-[0_3px_0_rgb(75,85,99)] transition-all w-full">
                     🔄 같은 방에서 다시 하기
                 </button>
             </div>
@@ -86,11 +91,11 @@
                 <div class="overflow-y-auto no-scrollbar flex-1 pr-2">
                     <table class="w-full text-center border-collapse">
                         <colgroup>
-                            <col style="width: 12%;">
-                            <col style="width: 28%;">
+                            <col style="width: 10%;">
                             <col style="width: 25%;">
-                            <col style="width: 20%;">
+                            <col style="width: 25%;">
                             <col style="width: 15%;">
+                            <col style="width: 25%;"> <!-- 버튼 2개가 들어가도록 넓이 조정 -->
                         </colgroup>
                         <thead class="sticky top-0 bg-[#1e1b4b] z-10">
                             <tr class="text-lg text-indigo-200">
@@ -152,9 +157,7 @@
         let currentPin = "";
         let roundCount = 0;
         let latestPlayersData = {}; 
-        
-        // (확률의 역수) ÷ 4 를 적용한 배수
-const multipliers = { 2: 9, 3: 4.5, 4: 3, 5: 2.25, 6: 1.8, 7: 1.5, 8: 1.8, 9: 2.25, 10: 3, 11: 4.5, 12: 9 };
+        const multipliers = { 2: 9, 3: 4.5, 4: 3, 5: 2.25, 6: 1.8, 7: 1.5, 8: 1.8, 9: 2.25, 10: 3, 11: 4.5, 12: 9 };
 
         function createCubeHTML(id) {
             const dots = {
@@ -198,6 +201,29 @@ const multipliers = { 2: 9, 3: 4.5, 4: 3, 5: 2.25, 6: 1.8, 7: 1.5, 8: 1.8, 9: 2.
             }
         });
 
+        // 💡 개별 학생 10만원 지급 함수
+        window.giveMoney = async function(playerName) {
+            if (confirm(`${playerName} 학생에게 10만원을 지급하시겠습니까? (파산한 경우 부활합니다)`)) {
+                const p = latestPlayersData[playerName];
+                await update(ref(db, `dice_rooms/${currentPin}/players/${playerName}`), {
+                    balance: (p.balance || 0) + 100000
+                });
+            }
+        };
+
+        // 💡 전체 학생 10만원 일괄 지급 이벤트
+        document.getElementById('btn-give-all').addEventListener('click', async () => {
+            if (confirm("방에 있는 모든 학생에게 일괄적으로 10만원씩 지급하시겠습니까? (파산한 학생도 부활합니다)")) {
+                const updates = {};
+                for (const key in latestPlayersData) {
+                    const p = latestPlayersData[key];
+                    updates[`dice_rooms/${currentPin}/players/${key}/balance`] = (p.balance || 0) + 100000;
+                }
+                await update(ref(db), updates);
+                alert("✅ 모든 학생에게 10만원이 지급되었습니다.");
+            }
+        });
+
         window.kickPlayer = async function(playerName) {
             if (confirm(`${playerName} 학생을 정말 강제 퇴장시키겠습니까?`)) {
                 await remove(ref(db, `dice_rooms/${currentPin}/players/${playerName}`));
@@ -236,12 +262,14 @@ const multipliers = { 2: 9, 3: 4.5, 4: 3, 5: 2.25, 6: 1.8, 7: 1.5, 8: 1.8, 9: 2.
                     }
                 }
 
+                // 💡 관리 탭에 [+10만] 버튼 추가
                 tr.innerHTML = `
                     <td class="p-3 text-xl font-bold">${idx + 1}</td>
                     <td class="p-3 text-lg font-bold text-left pl-4">${p.name}</td>
                     <td class="p-3 text-xl text-yellow-300">${p.balance.toLocaleString()} 원</td>
                     <td class="p-3">${statusBadge}</td>
-                    <td class="p-3">
+                    <td class="p-3 flex justify-center gap-2">
+                        <button onclick="giveMoney('${p.name}')" class="bg-emerald-500 hover:bg-emerald-400 text-white px-3 py-1 rounded-lg text-sm font-bold transition-colors">+10만</button>
                         <button onclick="kickPlayer('${p.name}')" class="bg-red-500 hover:bg-red-400 text-white px-3 py-1 rounded-lg text-sm font-bold transition-colors">퇴장</button>
                     </td>
                 `;
